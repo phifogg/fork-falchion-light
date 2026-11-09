@@ -88,7 +88,7 @@ On 2026-11-09, a second unit (firmware bytes 13 00 05 00, receiver firmware
 bytes 02 00 07 00) was tested through the Omni receiver with the cable
 unplugged: the version query, static blue and the three-packet rainbow wave
 returned the expected replies and were visually confirmed. Saving through the
-receiver has not been tested yet.
+receiver also persisted across a power-switch off/on cycle.
 
 Discovery requires exactly one matching USB model, interface 01, and an exact
 vendor-control HID descriptor. Both identity and descriptor are rechecked
