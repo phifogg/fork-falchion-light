@@ -14,6 +14,9 @@ falchion-light \- control wired ROG Falchion RX Low Profile lighting
 .B falchion-light battery
 .RB [ \-h | \-\-help ]
 .br
+.B falchion-light layout
+.RB [ \-h | \-\-help ]
+.br
 .B falchion-light set
 .I mode color
 .RB [ \-\-brightness " 0..100" ]
@@ -40,7 +43,13 @@ Does not open the device or send HID commands.
 .TP
 .B probe
 Verify the opened device and send a version query.
-Print the device identification and raw response without changing lighting.
+Print the device identification and raw response without changing lighting,
+followed by the active onboard profile (1\-5) and its effect.
+.TP
+.B layout
+Verify the opened device, send a version query, then a read-only layout query.
+Print the layout ID, its name if known, and whether it is an ISO layout.
+Does not change lighting.
 .TP
 .B battery
 Verify the opened device, send a version query, then a read-only power query.
@@ -118,6 +127,7 @@ Identify the device:
 .nf
     falchion-light info
     falchion-light probe
+    falchion-light layout
 .fi
 .PP
 Show battery level and charging state:

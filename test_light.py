@@ -61,5 +61,23 @@ class LightTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 light.battery_status(reply)
 
+    def test_active_state(self):
+        # Replies captured from a wired unit (firmware bytes 13 00 05 00).
+        version = bytes.fromhex('12 00 00 00 13 00 05 00 06 09 03') + bytes(53)
+        self.assertEqual(light.active_state(version), (3, 'raindrop'))
+        self.assertEqual(light.active_state(version[:9] + b'\x08' + version[10:]), (3, 'unknown (08)'))
+        for reply in [b'', b'\x12\x01' + bytes(62), b'\x12\x00' + bytes(5)]:
+            with self.assertRaises(RuntimeError):
+                light.active_state(reply)
+
+    def test_layout_name(self):
+        reply = bytes.fromhex('12 12 00 00 02 19') + bytes(58)
+        self.assertEqual(light.layout_name(reply), '25 (CH, ISO)')
+        self.assertEqual(light.layout_name(reply[:5] + bytes([17]) + reply[6:]), '17 (US, ANSI or unknown)')
+        self.assertEqual(light.layout_name(reply[:5] + bytes([7]) + reply[6:]), '7 (ISO)')
+        for reply in [b'', b'\x12\x00' + bytes(62), b'\x12\x12\x00']:
+            with self.assertRaises(RuntimeError):
+                light.layout_name(reply)
+
 if __name__ == '__main__':
     unittest.main()
