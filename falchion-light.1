@@ -11,6 +11,14 @@ falchion-light \- control wired ROG Falchion RX Low Profile lighting
 .B falchion-light probe
 .RB [ \-h | \-\-help ]
 .br
+.B falchion-light keys
+.RB [ \-\-all
+.IR RRGGBB ]
+.RI [ KEY=RRGGBB " ...]"
+.RB [ \-\-list ]
+.RB [ \-\-dry-run ]
+.RB [ \-h | \-\-help ]
+.br
 .B falchion-light set
 .I mode color
 .RB [ \-\-brightness " 0..100" ]
@@ -38,6 +46,15 @@ Does not open the device or send HID commands.
 .B probe
 Verify the opened device and send a version query.
 Print the device identification and raw response without changing lighting.
+.TP
+.BI "keys " "\fR[\fP--all RRGGBB\fR] [\fPKEY=RRGGBB ...\fR]\fP"
+Set individual key colors in direct mode.
+.B \-\-all
+colors every key first; KEY=RRGGBB pairs override single keys.
+Key names follow US key positions;
+.B \-\-list
+prints them. Colors are not saved and last until another effect is set
+or the keyboard is switched off.
 .TP
 .BI "set " "mode color"
 Query the device, then send the requested lighting effect.

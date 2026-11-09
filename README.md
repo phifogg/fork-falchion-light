@@ -12,6 +12,7 @@ Run `man falchion-light` for the full command reference and usage examples.
 ```sh
 falchion-light info
 falchion-light probe
+falchion-light keys --all 202020 W=ff0000 A=ff0000 S=ff0000 D=ff0000
 falchion-light set static 336699 --brightness 50
 falchion-light set static ff8800 --brightness 25
 falchion-light set static 336699 --brightness 0
@@ -21,6 +22,17 @@ Hex colors may have a leading # if quoted. Brightness is 0..100.
 `set` always specifies a complete effect, color and brightness; it does not
 attempt to infer the previous hardware state. Default brightness is 50%.
 The last example turns lighting off; repeat a nonzero command to restore it.
+
+### Per-key colors
+
+`keys` sets individual key colors in the keyboard's direct mode.
+`--all RRGGBB` colors every key first; `KEY=RRGGBB` pairs override single keys.
+Key names follow key positions on a US layout, so on a QWERTZ keyboard `Y` is
+the key labelled Z. `Less` (next to left Shift) and `Hash` (left of Enter)
+exist on ISO keyboards, `Backslash` only on ANSI. `falchion-light keys --list`
+prints all names. Keys that are not listed keep their current color; the
+running effect freezes. Per-key colors are not saved: they last until another
+effect is set or the keyboard is switched off.
 
 ### Lighting effect examples
 
@@ -166,6 +178,16 @@ https://github.com/seerge/g-helper/tree/dd2dced63fbd6e5abb1a50d88b738f7159f5e71d
 For USB 1b04, mode 04 requires three 51 2c packets with countdown tags 02, 01,
 00. Only the first carries speed, brightness, random-color flag 01, direction
 00 and per-LED flag 02. This replaces the unsupported single-packet approach.
+
+Per-key evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/AsusKeyboard.cs` (`SetLedColors`): direct packets
+`c0 81 count 00` followed by `led R G B` per key, 14 keys per packet. Its
+Falchion RX layout table follows the rule LED id = column * 8 + row, with rows
+1 to 5 on the Low Profile. The key table in this tool was written from that
+rule and checked on a Swiss German (ISO) unit by coloring each row, the arrow
+keys, WASD, Enter, `<` and the key left of Enter. The keyboard acknowledges
+each packet with `c0 82 count 00` rather than an echo. No G-Helper code or
+tables were reused.
 
 ## License
 
