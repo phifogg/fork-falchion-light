@@ -74,6 +74,39 @@ def sleep_value(reply):
         raise RuntimeError('Unexpected power reply')
     return reply[6]
 
+# Per-key (direct) LED ids: column * 8 + row, rows 1 (number row) to 5 (bottom row).
+# Key names follow key positions on a US layout; '<' and '#' exist on ISO, '\\' on ANSI only.
+KEY_ROWS = [
+    ['Esc', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Minus', 'Equal', 'Backspace', 'Insert'],
+    ['Tab', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 'LBracket', 'RBracket', 'Backslash', 'Delete'],
+    ['Caps', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Semicolon', 'Quote', 'Hash', 'Enter', 'PageUp'],
+    ['Shift', 'Less', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Comma', 'Period', 'Slash', 'RShift', 'Up', 'PageDown'],
+    ['Ctrl', 'Win', 'Alt', None, None, None, 'Space', None, None, 'RAlt', 'Fn', 'RCtrl', 'Left', 'Down', 'Right'],
+]
+KEYS = {name.lower(): column * 8 + row
+        for row, names in enumerate(KEY_ROWS, start=1)
+        for column, name in enumerate(names) if name}
+
+def key_entries(all_color, assignments):
+    """Map key=color pairs (and an optional color for all keys) to (led, rgb) entries."""
+    colors = {}
+    if all_color is not None:
+        colors = {led: all_color for led in KEYS.values()}
+    for name, rgb in assignments:
+        colors[KEYS[name.lower()]] = rgb
+    return list(colors.items())
+
+def key_payloads(entries):
+    """Build direct-mode packets: c0 81 count 00, then led R G B; 14 keys per packet."""
+    return [bytes([0xc0, 0x81, len(chunk), 0]) + b''.join(bytes([led]) + rgb for led, rgb in chunk)
+            for chunk in (entries[i:i + 14] for i in range(0, len(entries), 14))]
+
+def key_color(value):
+    name, sep, rgb = value.partition('=')
+    if not sep or name.lower() not in KEYS:
+        raise argparse.ArgumentTypeError(f'Use KEY=RRGGBB with a key from --list, not {value!r}')
+    return name, color(rgb)
+
 def find(link):
     found = []
     for node in Path('/sys/class/hidraw').glob('hidraw*'):
@@ -103,7 +136,7 @@ def discover():
             return path, link
     raise RuntimeError('No Falchion RX Low Profile found (wired or Omni receiver)')
 
-def exchange(fd, payload, link=WIRED):
+def exchange(fd, payload, link=WIRED, expect=None):
     """Send one report and return the echoed reply without its report ID."""
     # Bound stale-response draining. Never read keyboard input interfaces.
     for _ in range(16):
@@ -130,7 +163,7 @@ def exchange(fd, payload, link=WIRED):
             break
     else:
         raise RuntimeError('No reply with the expected report ID; outcome unconfirmed')
-    if not reply.startswith(payload):
+    if not reply.startswith(payload if expect is None else expect):
         raise RuntimeError('Unexpected response; outcome unconfirmed')
     return reply
 
@@ -166,6 +199,11 @@ def main():
     sleep.add_argument('minutes', nargs='?', choices=SLEEP, help='1, 2, 3, 5, 10 or never; omit to show')
     sleep.add_argument('--save', action='store_true', help='Explicitly apply/save to keyboard memory')
     sleep.add_argument('--dry-run', action='store_true', help='Print payload without accessing hardware')
+    keys = sub.add_parser('keys', help='Set colors of individual keys (not saved)')
+    keys.add_argument('keys', nargs='*', type=key_color, metavar='KEY=RRGGBB')
+    keys.add_argument('--all', type=color, metavar='RRGGBB', help='Color for every key not listed')
+    keys.add_argument('--list', action='store_true', help='List key names and LED ids')
+    keys.add_argument('--dry-run', action='store_true', help='Print payload without accessing hardware')
     lighting = sub.add_parser('set', help='Set a hardware lighting effect')
     lighting.add_argument('mode', choices=MODES)
     lighting.add_argument('color', type=color, help='RGB hex color (ignored by cycle and wave)')
@@ -179,6 +217,14 @@ def main():
         parser.error('--save and --dry-run need a timeout value')
     if args.command == 'sleep' and args.minutes:
         payloads = [bytes([0x51, 0x38, 0, 0, SLEEP[args.minutes]])]
+    if args.command == 'keys':
+        if args.list:
+            for row in KEY_ROWS:
+                print('  '.join(f'{name}={KEYS[name.lower()]:02x}' for name in row if name))
+            return
+        if args.all is None and not args.keys:
+            parser.error('keys needs --all and/or KEY=RRGGBB')
+        payloads = key_payloads(key_entries(args.all, args.keys))
     if args.command == 'set':
         payloads = effect_payloads(args.mode, args.color, args.brightness, args.speed)
     if payloads and args.dry_run:
@@ -217,7 +263,13 @@ def main():
         if args.command == 'layout':
             time.sleep(0.06)
             print('Layout ID:', layout_name(exchange(fd, b'\x12\x12', link)))
-        if args.command == 'sleep':
+        if args.command == 'keys':
+            for payload in payloads:
+                time.sleep(0.06)
+                # Direct mode acknowledges with c0 82 and the key count instead of an echo.
+                exchange(fd, payload, link, expect=bytes([0xc0, 0x82, payload[2], 0]))
+            print('Key colors replied; they last until another effect is set or the keyboard is switched off.')
+        elif args.command == 'sleep':
             for payload in payloads:
                 time.sleep(0.06)
                 exchange(fd, payload, link)

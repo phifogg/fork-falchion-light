@@ -17,6 +17,7 @@ falchion-light battery
 falchion-light layout
 falchion-light sleep
 falchion-light sleep 5 --save
+falchion-light keys --all 202020 W=ff0000 A=ff0000 S=ff0000 D=ff0000
 falchion-light set static 336699 --brightness 50
 falchion-light set static ff8800 --brightness 25
 falchion-light set static 336699 --brightness 0
@@ -41,6 +42,17 @@ idle sleep timeout. With `1`, `2`, `3`, `5`, `10` or `never` it sends `51 38`,
 reads the timeout back and stops with an error if it does not match. Like
 lighting, the new timeout only lasts until the keyboard is switched off unless
 `--save` is given.
+
+### Per-key colors
+
+`keys` sets individual key colors in the keyboard's direct mode.
+`--all RRGGBB` colors every key first; `KEY=RRGGBB` pairs override single keys.
+Key names follow key positions on a US layout, so on a QWERTZ keyboard `Y` is
+the key labelled Z. `Less` (next to left Shift) and `Hash` (left of Enter)
+exist on ISO keyboards, `Backslash` only on ANSI. `falchion-light keys --list`
+prints all names. Keys that are not listed keep their current color; the
+running effect freezes. Per-key colors are not saved: they last until another
+effect is set or the keyboard is switched off.
 
 ### Lighting effect examples
 
@@ -233,6 +245,16 @@ timeout returned after a power-switch off/on cycle; with 50 55 the new one staye
 G-Helper's low-battery warning command `51 37` is rejected with `ff aa` on this
 keyboard, wired and through the receiver, so it is not offered. No G-Helper code
 was reused.
+
+Per-key evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/AsusKeyboard.cs` (`SetLedColors`): direct packets
+`c0 81 count 00` followed by `led R G B` per key, 14 keys per packet. Its
+Falchion RX layout table follows the rule LED id = column * 8 + row, with rows
+1 to 5 on the Low Profile. The key table in this tool was written from that
+rule and checked on a Swiss German (ISO) unit by coloring each row, the arrow
+keys, WASD, Enter, `<` and the key left of Enter. The keyboard acknowledges
+each packet with `c0 82 count 00` rather than an echo. No G-Helper code or
+tables were reused.
 
 ## License
 

@@ -20,6 +20,13 @@ falchion-light \- control ROG Falchion RX Low Profile lighting
 .B falchion-light sleep
 .RI [ minutes ]
 .RB [ \-\-save ]
+.RB [ \-h | \-\-help ]
+.br
+.B falchion-light keys
+.RB [ \-\-all
+.IR RRGGBB ]
+.RI [ KEY=RRGGBB " ...]"
+.RB [ \-\-list ]
 .RB [ \-\-dry-run ]
 .RB [ \-h | \-\-help ]
 .br
@@ -72,6 +79,15 @@ set the timeout, read it back and fail if it does not match.
 The timeout lasts until the keyboard is switched off unless
 .B \-\-save
 is given.
+.TP
+.BI "keys " "\fR[\fP--all RRGGBB\fR] [\fPKEY=RRGGBB ...\fR]\fP"
+Set individual key colors in direct mode.
+.B \-\-all
+colors every key first; KEY=RRGGBB pairs override single keys.
+Key names follow US key positions;
+.B \-\-list
+prints them. Colors are not saved and last until another effect is set
+or the keyboard is switched off.
 .TP
 .BI "set " "mode color"
 Query the device, then send the requested lighting effect.

@@ -126,5 +126,31 @@ class LightTests(unittest.TestCase):
         self.assertEqual({k: bytes([0x51, 0x38, 0, 0, v]).hex(' ') for k, v in light.SLEEP.items()}['5'], '51 38 00 00 03')
         self.assertEqual(sorted(light.SLEEP.values()), [0, 1, 2, 3, 4, 0xff])
 
+    def test_key_ids(self):
+        # LED ids confirmed on a wired unit: column * 8 + row.
+        self.assertEqual([light.KEYS[k] for k in ['esc', 'q', 'a', 'w', 's', 'd']], [0x01, 0x0a, 0x0b, 0x12, 0x13, 0x1b])
+        self.assertEqual([light.KEYS[k] for k in ['up', 'left', 'down', 'right', 'space']], [0x6c, 0x65, 0x6d, 0x75, 0x35])
+        self.assertEqual(len(set(light.KEYS.values())), len(light.KEYS))
+
+    def test_key_payloads(self):
+        entries = light.key_entries(None, [('Esc', bytes.fromhex('ff0000')), ('q', bytes.fromhex('00ff00'))])
+        self.assertEqual(light.key_payloads(entries),
+                         [bytes.fromhex('c0 81 02 00 01 ff 00 00 0a 00 ff 00')])
+        packets = light.key_payloads(light.key_entries(bytes(3), [('W', bytes.fromhex('ffffff'))]))
+        self.assertEqual(sum(p[2] for p in packets), len(light.KEYS))
+        self.assertTrue(all(p[2] <= 14 and len(p) == 4 + 4 * p[2] for p in packets))
+        self.assertIn(bytes.fromhex('12 ff ff ff'), b''.join(packets))
+
+    def test_key_color_rejects_unknown(self):
+        self.assertEqual(light.key_color('Up=00ffff'), ('Up', bytes.fromhex('00ffff')))
+        for bad in ['F1=ff0000', 'Esc', 'Esc=fff']:
+            with self.assertRaises(Exception):
+                light.key_color(bad)
+
+    def test_direct_ack(self):
+        payload = bytes.fromhex('c0 81 01 00 01 ff 00 00')
+        with patch.object(light.select, 'select', side_effect=[([], [], []), ([], [9], []), ([9], [], [])]), patch.object(light.os, 'write', return_value=65), patch.object(light.os, 'read', return_value=b'\xc0\x82\x01\x00' + bytes(60)):
+            light.exchange(9, payload, expect=b'\xc0\x82\x01\x00')
+
 if __name__ == '__main__':
     unittest.main()
