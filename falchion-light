@@ -22,6 +22,14 @@ def effect_payloads(mode, rgb, brightness, speed):
                 bytes([0x51, 0x2c, 4, 0]).ljust(15, b'\0')]
     return [bytes([0x51, 0x2c, MODES[mode], 0, speed_byte, brightness, 0, 0, 2]) + rgb]
 
+def battery_status(reply):
+    """Parse a 12 01 power reply: percentage at [10], charging flag at [8]."""
+    if len(reply) < 11 or not reply.startswith(b'\x12\x01'):
+        raise RuntimeError('Unexpected battery reply')
+    if reply[10] > 100:
+        raise RuntimeError(f'Battery value {reply[10]} out of range')
+    return reply[10], reply[8] == 1
+
 def discover():
     found = []
     for node in Path('/sys/class/hidraw').glob('hidraw*'):
@@ -75,6 +83,7 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('info', help='Identify the wired control interface without sending commands')
     sub.add_parser('probe', help='Send a version query; does not change lighting')
+    sub.add_parser('battery', help='Query battery level and charging state; does not change lighting')
     lighting = sub.add_parser('set', help='Set a hardware lighting effect')
     lighting.add_argument('mode', choices=MODES)
     lighting.add_argument('color', type=color, help='RGB hex color (ignored by cycle and wave)')
@@ -113,6 +122,10 @@ def main():
         if descriptor[4:4 + len(DESCRIPTOR)] != DESCRIPTOR:
             raise RuntimeError('Opened device descriptor mismatch')
         exchange(fd, b'\x12\x00')
+        if args.command == 'battery':
+            time.sleep(0.06)
+            percent, charging = battery_status(exchange(fd, b'\x12\x01'))
+            print(f'Battery: {percent}%' + (', charging' if charging else ''))
         if payloads:
             for payload in payloads:
                 time.sleep(0.06)

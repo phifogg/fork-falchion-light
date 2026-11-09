@@ -12,6 +12,7 @@ Run `man falchion-light` for the full command reference and usage examples.
 ```sh
 falchion-light info
 falchion-light probe
+falchion-light battery
 falchion-light set static 336699 --brightness 50
 falchion-light set static ff8800 --brightness 25
 falchion-light set static 336699 --brightness 0
@@ -21,6 +22,10 @@ Hex colors may have a leading # if quoted. Brightness is 0..100.
 `set` always specifies a complete effect, color and brightness; it does not
 attempt to infer the previous hardware state. Default brightness is 50%.
 The last example turns lighting off; repeat a nonzero command to restore it.
+
+`battery` sends the version query and then the read-only power query `12 01`,
+and prints the battery level and whether the keyboard is charging, e.g.
+`Battery: 72%, charging`. It does not change lighting.
 
 ### Lighting effect examples
 
@@ -166,6 +171,14 @@ https://github.com/seerge/g-helper/tree/dd2dced63fbd6e5abb1a50d88b738f7159f5e71d
 For USB 1b04, mode 04 requires three 51 2c packets with countdown tags 02, 01,
 00. Only the first carries speed, brightness, random-color flag 01, direction
 00 and per-LED flag 02. This replaces the unsupported single-packet approach.
+
+Battery protocol evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/Models/Falchion.cs` and `AsusKeyboard.cs`. The power
+query is 12 01. G-Helper indexes its buffer including the report ID, so its
+offsets 11 (percentage) and 9 (charging flag) are bytes 10 and 8 of the hidraw
+reply. On a wired unit with firmware bytes `13 00 05 00`, the reply
+`12 01 00 00 00 48 02 01 01 14 48 …` was read as 72%, charging.
+No G-Helper code was reused.
 
 ## License
 

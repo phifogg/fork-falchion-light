@@ -49,5 +49,17 @@ class LightTests(unittest.TestCase):
                 light.exchange(9, b'\x12\0')
             self.assertEqual(write.call_count, 1)
 
+    def test_battery_status(self):
+        # Reply captured from a wired unit: 72 %, charging.
+        reply = bytes.fromhex('12 01 00 00 00 48 02 01 01 14 48 1c 10') + bytes(51)
+        self.assertEqual(light.battery_status(reply), (72, True))
+        self.assertEqual(light.battery_status(reply[:8] + b'\0' + reply[9:]), (72, False))
+
+    def test_battery_rejects_bad_reply(self):
+        for reply in [b'', b'\x12\x00' + bytes(62), b'\x12\x01' + bytes(5),
+                      bytes.fromhex('12 01 00 00 00 00 00 00 00 00 65') + bytes(53)]:
+            with self.assertRaises(RuntimeError):
+                light.battery_status(reply)
+
 if __name__ == '__main__':
     unittest.main()
