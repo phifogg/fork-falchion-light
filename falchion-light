@@ -22,6 +22,21 @@ def effect_payloads(mode, rgb, brightness, speed):
                 bytes([0x51, 0x2c, 4, 0]).ljust(15, b'\0')]
     return [bytes([0x51, 0x2c, MODES[mode], 0, speed_byte, brightness, 0, 0, 2]) + rgb]
 
+# Sleep timeout byte (51 38, and byte 6 of the 12 01 reply) per G-Helper.
+SLEEP = {'1': 0x00, '2': 0x01, '3': 0x02, '5': 0x03, '10': 0x04, 'never': 0xff}
+
+def sleep_label(value):
+    names = {v: k for k, v in SLEEP.items()}
+    if value not in names:
+        return f'unknown ({value:02x})'
+    return 'never' if value == 0xff else f'{names[value]} min'
+
+def sleep_value(reply):
+    """Parse a 12 01 power reply: sleep timeout at [6]."""
+    if len(reply) < 7 or not reply.startswith(b'\x12\x01'):
+        raise RuntimeError('Unexpected power reply')
+    return reply[6]
+
 def discover():
     found = []
     for node in Path('/sys/class/hidraw').glob('hidraw*'):
@@ -75,6 +90,10 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('info', help='Identify the wired control interface without sending commands')
     sub.add_parser('probe', help='Send a version query; does not change lighting')
+    sleep = sub.add_parser('sleep', help='Show or set the idle sleep timeout')
+    sleep.add_argument('minutes', nargs='?', choices=SLEEP, help='1, 2, 3, 5, 10 or never; omit to show')
+    sleep.add_argument('--save', action='store_true', help='Explicitly apply/save to keyboard memory')
+    sleep.add_argument('--dry-run', action='store_true', help='Print payload without accessing hardware')
     lighting = sub.add_parser('set', help='Set a hardware lighting effect')
     lighting.add_argument('mode', choices=MODES)
     lighting.add_argument('color', type=color, help='RGB hex color (ignored by cycle and wave)')
@@ -84,12 +103,16 @@ def main():
     lighting.add_argument('--dry-run', action='store_true', help='Print payload without accessing hardware')
     args = parser.parse_args()
     payloads = []
+    if args.command == 'sleep' and not args.minutes and (args.save or args.dry_run):
+        parser.error('--save and --dry-run need a timeout value')
+    if args.command == 'sleep' and args.minutes:
+        payloads = [bytes([0x51, 0x38, 0, 0, SLEEP[args.minutes]])]
     if args.command == 'set':
         payloads = effect_payloads(args.mode, args.color, args.brightness, args.speed)
-        if args.dry_run:
-            for payload in payloads:
-                print('Report (zero report ID + 64-byte payload):', (b'\0' + payload.ljust(64, b'\0')).hex(' '))
-            return
+    if payloads and args.dry_run:
+        for payload in payloads:
+            print('Report (zero report ID + 64-byte payload):', (b'\0' + payload.ljust(64, b'\0')).hex(' '))
+        return
     path = discover()
     print(f'ROG Falchion RX Low Profile 0b05:1b04, USB interface 01: {path}')
     if args.command == 'info':
@@ -113,7 +136,19 @@ def main():
         if descriptor[4:4 + len(DESCRIPTOR)] != DESCRIPTOR:
             raise RuntimeError('Opened device descriptor mismatch')
         exchange(fd, b'\x12\x00')
-        if payloads:
+        if args.command == 'sleep':
+            for payload in payloads:
+                time.sleep(0.06)
+                exchange(fd, payload)
+            time.sleep(0.06)
+            value = sleep_value(exchange(fd, b'\x12\x01'))
+            if payloads and value != payloads[0][4]:
+                raise RuntimeError(f'Sleep timeout reads back as {sleep_label(value)}; outcome unconfirmed')
+            if payloads and args.save:
+                time.sleep(0.06)
+                exchange(fd, b'\x50\x55')
+            print('Sleep timeout:', sleep_label(value) + (', saved' if payloads and args.save else ''))
+        elif payloads:
             for payload in payloads:
                 time.sleep(0.06)
                 exchange(fd, payload)

@@ -49,5 +49,20 @@ class LightTests(unittest.TestCase):
                 light.exchange(9, b'\x12\0')
             self.assertEqual(write.call_count, 1)
 
+    def test_sleep_value_and_label(self):
+        # Reply captured from a wired unit: sleep timeout 02 = 3 minutes.
+        reply = bytes.fromhex('12 01 00 00 00 48 02 01 01 14 48 1c 10') + bytes(51)
+        self.assertEqual(light.sleep_value(reply), 2)
+        self.assertEqual(light.sleep_label(2), '3 min')
+        self.assertEqual(light.sleep_label(0xff), 'never')
+        self.assertEqual(light.sleep_label(7), 'unknown (07)')
+        for bad in [b'', b'\x12\x00' + bytes(62), b'\x12\x01\x00']:
+            with self.assertRaises(RuntimeError):
+                light.sleep_value(bad)
+
+    def test_sleep_payloads(self):
+        self.assertEqual({k: bytes([0x51, 0x38, 0, 0, v]).hex(' ') for k, v in light.SLEEP.items()}['5'], '51 38 00 00 03')
+        self.assertEqual(sorted(light.SLEEP.values()), [0, 1, 2, 3, 4, 0xff])
+
 if __name__ == '__main__':
     unittest.main()

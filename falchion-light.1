@@ -11,6 +11,12 @@ falchion-light \- control wired ROG Falchion RX Low Profile lighting
 .B falchion-light probe
 .RB [ \-h | \-\-help ]
 .br
+.B falchion-light sleep
+.RI [ minutes ]
+.RB [ \-\-save ]
+.RB [ \-\-dry-run ]
+.RB [ \-h | \-\-help ]
+.br
 .B falchion-light set
 .I mode color
 .RB [ \-\-brightness " 0..100" ]
@@ -38,6 +44,15 @@ Does not open the device or send HID commands.
 .B probe
 Verify the opened device and send a version query.
 Print the device identification and raw response without changing lighting.
+.TP
+.BI "sleep " "\fR[\fPminutes\fR]\fP"
+Without a value, send a read-only power query and print the idle sleep timeout.
+With
+.BR 1 ", " 2 ", " 3 ", " 5 ", " 10 " or " never ,
+set the timeout, read it back and fail if it does not match.
+The timeout lasts until the keyboard is switched off unless
+.B \-\-save
+is given.
 .TP
 .BI "set " "mode color"
 Query the device, then send the requested lighting effect.

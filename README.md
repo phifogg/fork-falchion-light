@@ -12,6 +12,8 @@ Run `man falchion-light` for the full command reference and usage examples.
 ```sh
 falchion-light info
 falchion-light probe
+falchion-light sleep
+falchion-light sleep 5 --save
 falchion-light set static 336699 --brightness 50
 falchion-light set static ff8800 --brightness 25
 falchion-light set static 336699 --brightness 0
@@ -21,6 +23,12 @@ Hex colors may have a leading # if quoted. Brightness is 0..100.
 `set` always specifies a complete effect, color and brightness; it does not
 attempt to infer the previous hardware state. Default brightness is 50%.
 The last example turns lighting off; repeat a nonzero command to restore it.
+
+`sleep` without a value sends the read-only power query `12 01` and prints the
+idle sleep timeout. With `1`, `2`, `3`, `5`, `10` or `never` it sends `51 38`,
+reads the timeout back and stops with an error if it does not match. Like
+lighting, the new timeout only lasts until the keyboard is switched off unless
+`--save` is given.
 
 ### Lighting effect examples
 
@@ -166,6 +174,17 @@ https://github.com/seerge/g-helper/tree/dd2dced63fbd6e5abb1a50d88b738f7159f5e71d
 For USB 1b04, mode 04 requires three 51 2c packets with countdown tags 02, 01,
 00. Only the first carries speed, brightness, random-color flag 01, direction
 00 and per-LED flag 02. This replaces the unsupported single-packet approach.
+
+Sleep timeout evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/AsusKeyboard.cs` (`SetEnergySettings`, power query
+12 01) and `app/Peripherals/Mouse/AsusMouse.cs` (`PowerOffSetting`: 00 = 1, 01 = 2,
+02 = 3, 03 = 5, 04 = 10 minutes, ff = never). G-Helper's reply offset 7 is byte 6
+of the hidraw reply. On a second unit, `51 38 00 00 00` set byte 6 to 00 and the
+lighting switched off after about one minute idle. Without 50 55 the previous
+timeout returned after a power-switch off/on cycle; with 50 55 the new one stayed.
+G-Helper's low-battery warning command `51 37` is rejected with `ff aa` on this
+keyboard, wired and through the receiver, so it is not offered. No G-Helper code
+was reused.
 
 ## License
 
