@@ -87,7 +87,10 @@ colors every key first; KEY=RRGGBB pairs override single keys.
 Key names follow US key positions;
 .B \-\-list
 prints them. Colors are not saved and last until another effect is set
-or the keyboard is switched off.
+or the keyboard is switched off. While they are shown, the keyboard ignores
+profile switching; run any
+.B set
+command or switch the keyboard off and on to leave per-key mode.
 .TP
 .BI "set " "mode color"
 Query the device, then send the requested lighting effect.

@@ -52,7 +52,9 @@ the key labelled Z. `Less` (next to left Shift) and `Hash` (left of Enter)
 exist on ISO keyboards, `Backslash` only on ANSI. `falchion-light keys --list`
 prints all names. Keys that are not listed keep their current color; the
 running effect freezes. Per-key colors are not saved: they last until another
-effect is set or the keyboard is switched off.
+effect is set or the keyboard is switched off. While they are shown, the
+keyboard ignores profile switching with Fn shortcuts. To leave per-key mode,
+run any `set` command or switch the keyboard off and on.
 
 ### Lighting effect examples
 
