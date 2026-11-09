@@ -164,7 +164,7 @@ def main():
                 time.sleep(0.06)
                 # Direct mode acknowledges with c0 82 and the key count instead of an echo.
                 exchange(fd, payload, expect=bytes([0xc0, 0x82, payload[2], 0]))
-            print('Key colors replied; they last until another effect is set or the keyboard is switched off.')
+            print('Key colors replied. They last until a set command or power cycle; profile switching is blocked meanwhile.')
         elif payloads:
             for payload in payloads:
                 time.sleep(0.06)
