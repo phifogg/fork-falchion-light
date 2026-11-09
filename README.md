@@ -15,6 +15,8 @@ falchion-light info
 falchion-light probe
 falchion-light battery
 falchion-light layout
+falchion-light sleep
+falchion-light sleep 5 --save
 falchion-light set static 336699 --brightness 50
 falchion-light set static ff8800 --brightness 25
 falchion-light set static 336699 --brightness 0
@@ -33,6 +35,12 @@ and prints the battery level and whether the keyboard is charging, e.g.
 `Active profile: 3, effect: raindrop`. Effects without a name in this tool are
 shown as `unknown (NN)`. `layout` sends the read-only query `12 12` and prints
 the keyboard layout ID, e.g. `Layout ID: 25 (CH, ISO)`. Neither changes lighting.
+
+`sleep` without a value sends the read-only power query `12 01` and prints the
+idle sleep timeout. With `1`, `2`, `3`, `5`, `10` or `never` it sends `51 38`,
+reads the timeout back and stops with an error if it does not match. Like
+lighting, the new timeout only lasts until the keyboard is switched off unless
+`--save` is given.
 
 ### Lighting effect examples
 
@@ -214,6 +222,17 @@ Linux this is one hidraw node for interface 02 with three vendor collections
 (report IDs 01-03, 63 bytes each). Commands are the same as wired, sent as
 report ID 02 followed by 63 payload bytes; replies start with 02 followed by
 the usual echo. No G-Helper code was reused.
+
+Sleep timeout evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/AsusKeyboard.cs` (`SetEnergySettings`, power query
+12 01) and `app/Peripherals/Mouse/AsusMouse.cs` (`PowerOffSetting`: 00 = 1, 01 = 2,
+02 = 3, 03 = 5, 04 = 10 minutes, ff = never). G-Helper's reply offset 7 is byte 6
+of the hidraw reply. On a second unit, `51 38 00 00 00` set byte 6 to 00 and the
+lighting switched off after about one minute idle. Without 50 55 the previous
+timeout returned after a power-switch off/on cycle; with 50 55 the new one stayed.
+G-Helper's low-battery warning command `51 37` is rejected with `ff aa` on this
+keyboard, wired and through the receiver, so it is not offered. No G-Helper code
+was reused.
 
 ## License
 
