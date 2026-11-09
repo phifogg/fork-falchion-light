@@ -22,6 +22,27 @@ def effect_payloads(mode, rgb, brightness, speed):
                 bytes([0x51, 0x2c, 4, 0]).ljust(15, b'\0')]
     return [bytes([0x51, 0x2c, MODES[mode], 0, speed_byte, brightness, 0, 0, 2]) + rgb]
 
+# Layout IDs from G-Helper (3, 4, 5, 17) plus 25, read from a Swiss German unit.
+LAYOUTS = {3: 'DE', 4: 'UK', 5: 'FR', 17: 'US', 25: 'CH'}
+ISO_LAYOUTS = {3, 4, 5, 7, 8, 11, 12, 15, 18, 19, 20, 23, 25}
+
+def active_state(reply):
+    """Parse a 12 00 reply: active effect at [9], active profile at [10]."""
+    if len(reply) < 11 or not reply.startswith(b'\x12\x00'):
+        raise RuntimeError('Unexpected version reply')
+    names = {value: name for name, value in MODES.items()}
+    effect = names.get(reply[9], f'unknown ({reply[9]:02x})')
+    return reply[10], effect
+
+def layout_name(reply):
+    """Parse a 12 12 reply: layout ID at [5]."""
+    if len(reply) < 6 or not reply.startswith(b'\x12\x12'):
+        raise RuntimeError('Unexpected layout reply')
+    layout = reply[5]
+    kind = 'ISO' if layout in ISO_LAYOUTS else 'ANSI or unknown'
+    name = LAYOUTS.get(layout)
+    return f'{layout} ({name}, {kind})' if name else f'{layout} ({kind})'
+
 def discover():
     found = []
     for node in Path('/sys/class/hidraw').glob('hidraw*'):
@@ -75,6 +96,7 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('info', help='Identify the wired control interface without sending commands')
     sub.add_parser('probe', help='Send a version query; does not change lighting')
+    sub.add_parser('layout', help='Query the keyboard layout ID; does not change lighting')
     lighting = sub.add_parser('set', help='Set a hardware lighting effect')
     lighting.add_argument('mode', choices=MODES)
     lighting.add_argument('color', type=color, help='RGB hex color (ignored by cycle and wave)')
@@ -112,7 +134,12 @@ def main():
         fcntl.ioctl(fd, 0x90044802, descriptor, True)
         if descriptor[4:4 + len(DESCRIPTOR)] != DESCRIPTOR:
             raise RuntimeError('Opened device descriptor mismatch')
-        exchange(fd, b'\x12\x00')
+        profile, effect = active_state(exchange(fd, b'\x12\x00'))
+        if args.command == 'probe':
+            print(f'Active profile: {profile}, effect: {effect}')
+        if args.command == 'layout':
+            time.sleep(0.06)
+            print('Layout ID:', layout_name(exchange(fd, b'\x12\x12')))
         if payloads:
             for payload in payloads:
                 time.sleep(0.06)

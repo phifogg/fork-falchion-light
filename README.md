@@ -12,6 +12,7 @@ Run `man falchion-light` for the full command reference and usage examples.
 ```sh
 falchion-light info
 falchion-light probe
+falchion-light layout
 falchion-light set static 336699 --brightness 50
 falchion-light set static ff8800 --brightness 25
 falchion-light set static 336699 --brightness 0
@@ -21,6 +22,11 @@ Hex colors may have a leading # if quoted. Brightness is 0..100.
 `set` always specifies a complete effect, color and brightness; it does not
 attempt to infer the previous hardware state. Default brightness is 50%.
 The last example turns lighting off; repeat a nonzero command to restore it.
+
+`probe` also prints the active onboard profile (1-5) and its effect, e.g.
+`Active profile: 3, effect: raindrop`. Effects without a name in this tool are
+shown as `unknown (NN)`. `layout` sends the read-only query `12 12` and prints
+the keyboard layout ID, e.g. `Layout ID: 25 (CH, ISO)`. Neither changes lighting.
 
 ### Lighting effect examples
 
@@ -166,6 +172,15 @@ https://github.com/seerge/g-helper/tree/dd2dced63fbd6e5abb1a50d88b738f7159f5e71d
 For USB 1b04, mode 04 requires three 51 2c packets with countdown tags 02, 01,
 00. Only the first carries speed, brightness, random-color flag 01, direction
 00 and per-LED flag 02. This replaces the unsupported single-packet approach.
+
+Profile and layout evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/AsusKeyboard.cs` and `Models/Falchion.cs`. G-Helper
+indexes its buffer including the report ID, so its offsets 10 (effect), 11
+(profile) and 6 (layout ID) are bytes 9, 10 and 5 of the hidraw reply. Switching
+through all five onboard profiles on a wired unit changed byte 10 from 1 to 5,
+and byte 9 matched each profile's visible effect. A Swiss German unit reports
+layout ID 25. Layout names 3 DE, 4 UK, 5 FR and 17 US and the ISO layout ID list
+come from G-Helper. No G-Helper code was reused.
 
 ## License
 
