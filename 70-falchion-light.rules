@@ -1,2 +1,5 @@
-# Active local session only; wired Falchion RX Low Profile vendor interface.
+# Active local session only; Falchion RX Low Profile vendor interfaces.
+# Wired keyboard 0b05:1b04, interface 01.
 ACTION=="add|change", SUBSYSTEM=="hidraw", ENV{ID_VENDOR_ID}=="0b05", ENV{ID_MODEL_ID}=="1b04", ENV{ID_USB_INTERFACE_NUM}=="01", TAG+="uaccess"
+# ROG Omni receiver 0b05:1ace, interface 02 (vendor control only, not the typing interfaces).
+ACTION=="add|change", SUBSYSTEM=="hidraw", ENV{ID_VENDOR_ID}=="0b05", ENV{ID_MODEL_ID}=="1ace", ENV{ID_USB_INTERFACE_NUM}=="02", TAG+="uaccess"

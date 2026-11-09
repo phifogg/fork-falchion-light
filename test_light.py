@@ -79,5 +79,37 @@ class LightTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 light.layout_name(reply)
 
+    def omni_exchange(self, replies):
+        payload = b'\x12\x00'
+        selects = [([], [], []), ([], [9], [])] + [([9], [], [])] * len(replies)
+        with patch.object(light.select, 'select', side_effect=selects), patch.object(light.os, 'write', return_value=64) as write, patch.object(light.os, 'read', side_effect=replies):
+            result = light.exchange(9, payload, light.OMNI)
+            self.assertEqual(write.call_args.args[1], b'\x02' + payload + bytes(61))
+            self.assertEqual(write.call_count, 1)
+            return result
+
+    def test_omni_framing_strips_report_id(self):
+        # Reply captured through the Omni receiver.
+        reply = bytes.fromhex('02 12 00 00 00 02 00 07 00 06 00 03 13 00 05 00') + bytes(48)
+        self.assertEqual(self.omni_exchange([reply]), reply[1:])
+
+    def test_omni_skips_other_report_ids(self):
+        reply = b'\x02\x12\x00' + bytes(61)
+        self.assertEqual(self.omni_exchange([b'\x01' + bytes(63), b'\x03' + bytes(63), reply]), reply[1:])
+
+    def test_omni_rejects_error_reply(self):
+        # The keyboard answers unsupported commands with ff aa.
+        with self.assertRaises(RuntimeError):
+            self.omni_exchange([b'\x02\xff\xaa' + bytes(61)])
+
+    def test_keyboard_reachable(self):
+        # Through the receiver: keyboard firmware at [11..14], zero while asleep.
+        awake = bytes.fromhex('12 00 00 00 02 00 07 00 06 09 03 13 00 05 00') + bytes(48)
+        asleep = bytes.fromhex('12 00 00 00 02 00 07 00') + bytes(55)
+        self.assertTrue(light.keyboard_reachable(awake, light.OMNI))
+        self.assertFalse(light.keyboard_reachable(asleep, light.OMNI))
+        # Wired replies are always from the keyboard itself.
+        self.assertTrue(light.keyboard_reachable(asleep, light.WIRED))
+
 if __name__ == '__main__':
     unittest.main()
