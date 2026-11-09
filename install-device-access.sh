@@ -9,4 +9,5 @@ fi
 install -m 0644 "$source_dir/70-falchion-light.rules" "$rule"
 udevadm control --reload-rules
 udevadm trigger --action=change --subsystem-match=hidraw --property-match=ID_VENDOR_ID=0b05 --property-match=ID_MODEL_ID=1b04 --property-match=ID_USB_INTERFACE_NUM=01
+udevadm trigger --action=change --subsystem-match=hidraw --property-match=ID_VENDOR_ID=0b05 --property-match=ID_MODEL_ID=1ace --property-match=ID_USB_INTERFACE_NUM=02
 udevadm settle --timeout=5

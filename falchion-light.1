@@ -1,6 +1,6 @@
 .TH FALCHION-LIGHT 1 "2026-10-15" "Falchion Light" "User Commands"
 .SH NAME
-falchion-light \- control wired ROG Falchion RX Low Profile lighting
+falchion-light \- control ROG Falchion RX Low Profile lighting
 .SH SYNOPSIS
 .B falchion-light
 .RB [ \-h | \-\-help ]
@@ -20,8 +20,10 @@ falchion-light \- control wired ROG Falchion RX Low Profile lighting
 .RB [ \-h | \-\-help ]
 .SH DESCRIPTION
 .B falchion-light
-controls lighting through the existing Linux hidraw driver on a wired ASUS
-ROG Falchion RX Low Profile keyboard, USB ID 0b05:1b04, interface 01.
+controls lighting through the existing Linux hidraw driver on an ASUS
+ROG Falchion RX Low Profile keyboard, either wired (USB ID 0b05:1b04,
+interface 01) or through its ROG Omni receiver (USB ID 0b05:1ace,
+interface 02). When both are present, the wired interface is used.
 It requires Python 3 and device access granted by the installed udev rule.
 No daemon or custom kernel module is needed.
 .PP
@@ -32,7 +34,7 @@ previous settings are not read back or preserved automatically.
 .SH COMMANDS
 .TP
 .B info
-Identify the wired lighting interface and verify its descriptor.
+Identify the lighting interface (wired or receiver) and verify its descriptor.
 Does not open the device or send HID commands.
 .TP
 .B probe
@@ -195,12 +197,14 @@ Installed executable.
 Installed manual page.
 .TP
 .I /etc/udev/rules.d/70-falchion-light.rules
-Grants the active local desktop user access to the wired lighting interface.
+Grants the active local desktop user access to the wired lighting interface
+and the Omni receiver's vendor-control interface.
 .TP
 .I README.md (in the source checkout)
 Source documentation, validation notes, and removal instructions.
 .SH LIMITATIONS
-Only wired USB is supported. Receiver and Bluetooth control are unsupported.
+Wired USB and the ROG Omni receiver are supported. Bluetooth is unsupported.
+Saving through the receiver has not been tested.
 As of 2026-10-15, static blue at 50 percent brightness was visually confirmed
 on this unit. Other animated effects besides the confirmed rainbow wave
 follow community protocol evidence and remain unverified here.
@@ -212,8 +216,8 @@ The program requires exactly one matching device and an exact supported
 descriptor. It does not update firmware, reset the keyboard, accept arbitrary
 HID commands, or read typing interfaces.
 .SH TROUBLESHOOTING
-If no matching device is found, connect the keyboard with a USB data cable
-and select wired mode.
+If no matching device is found, connect the keyboard with a USB data cable,
+or plug in the Omni receiver and switch the keyboard to 2.4 GHz mode.
 If access is denied, verify the installed udev rule and reconnect the keyboard
 while logged into the local desktop session.
 .SH SEE ALSO

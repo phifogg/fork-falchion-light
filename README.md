@@ -1,7 +1,8 @@
 # Falchion Light
 
-Local Python 3 userspace lighting controller for the wired ASUS ROG
-Falchion RX Low Profile, USB 0b05:1b04, firmware reported as 04.00.04.00.
+Local Python 3 userspace lighting controller for the ASUS ROG Falchion RX
+Low Profile, wired (USB 0b05:1b04, firmware reported as 04.00.04.00) or through
+its ROG Omni receiver (USB 0b05:1ace).
 Uses the existing Linux hidraw driver. No daemon, downloaded executable,
 third-party Python dependency, or custom kernel module.
 
@@ -80,7 +81,14 @@ If the wave returns without running the command, no Linux startup task is needed
 
 On 2026-10-15, the version query and static 336699 at 50% brightness returned
 the expected responses. Steady blue lighting was visually confirmed on the test keyboard.
-Wired USB only; receiver and Bluetooth operation are unsupported.
+Wired USB and the ROG Omni receiver are supported; Bluetooth is not. When both
+are connected, the wired interface is used.
+
+On 2026-11-09, a second unit (firmware bytes 13 00 05 00, receiver firmware
+bytes 02 00 07 00) was tested through the Omni receiver with the cable
+unplugged: the version query, static blue and the three-packet rainbow wave
+returned the expected replies and were visually confirmed. Saving through the
+receiver has not been tested yet.
 
 Discovery requires exactly one matching USB model, interface 01, and an exact
 vendor-control HID descriptor. Both identity and descriptor are rechecked
@@ -98,8 +106,9 @@ python3 -m unittest discover -v
 ## Permissions and installation
 
 Requires Linux, Python 3, and udev/logind for active-session device access.
-Only the wired ASUS ROG Falchion RX Low Profile USB `0b05:1b04` has been tested;
-other Falchion variants are unsupported.
+Only the ASUS ROG Falchion RX Low Profile, wired (`0b05:1b04`) or through its
+ROG Omni receiver (`0b05:1ace`), has been tested; other Falchion variants are
+unsupported.
 
 Clone the repository and install the executable and manual page:
 
@@ -123,8 +132,11 @@ available. Run `falchion-light info` first to check discovery without sending
 commands, then `falchion-light probe` to query the firmware version.
 
 The rule grants the active local desktop user read/write access only to
-the vendor interface of this exact wired model through udev/logind uaccess.
-It does not grant access to the keyboard's typing interfaces. Programs
+the vendor interface of the wired keyboard (interface 01) and of the Omni
+receiver (interface 02) through udev/logind uaccess. It does not grant access
+to the keyboard's or the receiver's typing and pointer interfaces. If an older
+version of the rule is already installed, remove it first so the helper can
+install the version with the receiver line. Programs
 running as the active user can issue vendor commands through the granted
 interface, so this is still a device-access permission grant.
 
@@ -166,6 +178,14 @@ https://github.com/seerge/g-helper/tree/dd2dced63fbd6e5abb1a50d88b738f7159f5e71d
 For USB 1b04, mode 04 requires three 51 2c packets with countdown tags 02, 01,
 00. Only the first carries speed, brightness, random-color flag 01, direction
 00 and per-LED flag 02. This replaces the unsupported single-packet approach.
+
+Omni receiver evidence: G-Helper commit 991145fc25c2bd0b3345f334f1fdeb8b4172322a,
+`app/Peripherals/Keyboard/Models/Falchion.cs` (`FalchionRXLowProfileOmni`):
+product 1ace, interface 2, collection 2, report ID 02, 64-byte packets. On
+Linux this is one hidraw node for interface 02 with three vendor collections
+(report IDs 01-03, 63 bytes each). Commands are the same as wired, sent as
+report ID 02 followed by 63 payload bytes; replies start with 02 followed by
+the usual echo. No G-Helper code was reused.
 
 ## License
 
