@@ -90,6 +90,21 @@ def exchange(fd, payload, link=WIRED):
         raise RuntimeError('Unexpected response; outcome unconfirmed')
     return reply
 
+def keyboard_reachable(reply, link):
+    """Through the receiver, a 12 00 reply carries the keyboard firmware at [11..14];
+    it is all zero while the keyboard is asleep or off."""
+    return link is not OMNI or any(reply[11:15])
+
+def handshake(fd, link):
+    reply = exchange(fd, b'\x12\x00', link)
+    if not keyboard_reachable(reply, link):
+        # Give a sleeping keyboard one chance to wake up, then stop.
+        time.sleep(0.5)
+        reply = exchange(fd, b'\x12\x00', link)
+        if not keyboard_reachable(reply, link):
+            raise RuntimeError('Receiver answered but the keyboard did not; is it switched on and in 2.4 GHz mode?')
+    return reply
+
 def color(value):
     value = value.removeprefix('#')
     if len(value) != 6 or any(c not in '0123456789abcdefABCDEF' for c in value):
@@ -138,7 +153,7 @@ def main():
         fcntl.ioctl(fd, 0x90044802, descriptor, True)
         if descriptor[4:4 + len(link['descriptor'])] != link['descriptor']:
             raise RuntimeError('Opened device descriptor mismatch')
-        exchange(fd, b'\x12\x00', link)
+        handshake(fd, link)
         if payloads:
             for payload in payloads:
                 time.sleep(0.06)

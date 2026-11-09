@@ -72,5 +72,14 @@ class LightTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.omni_exchange([b'\x02\xff\xaa' + bytes(61)])
 
+    def test_keyboard_reachable(self):
+        # Through the receiver: keyboard firmware at [11..14], zero while asleep.
+        awake = bytes.fromhex('12 00 00 00 02 00 07 00 06 09 03 13 00 05 00') + bytes(48)
+        asleep = bytes.fromhex('12 00 00 00 02 00 07 00') + bytes(55)
+        self.assertTrue(light.keyboard_reachable(awake, light.OMNI))
+        self.assertFalse(light.keyboard_reachable(asleep, light.OMNI))
+        # Wired replies are always from the keyboard itself.
+        self.assertTrue(light.keyboard_reachable(asleep, light.WIRED))
+
 if __name__ == '__main__':
     unittest.main()
